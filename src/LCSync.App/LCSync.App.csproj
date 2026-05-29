@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>LCSync</AssemblyName>
+    <RootNamespace>LCSync</RootNamespace>
+    <Version>1.0.0</Version>
+    <Authors>LCSync</Authors>
+    <Description>实验室中心联屏系统</Description>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ReleaseVersion>1.1.0</ReleaseVersion>
+    <ApplicationIcon>..\..\assets\app.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Drawing.Common" Version="4.7.2" />
+    <PackageReference Include="WebSocketSharp" Version="1.0.3-rc11" />
+  </ItemGroup>
+
+</Project>

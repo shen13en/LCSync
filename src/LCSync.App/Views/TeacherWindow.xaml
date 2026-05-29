@@ -1,0 +1,214 @@
+<Window x:Class="LCSync.Views.TeacherWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="LCSync - 教师模式"
+        Width="1000"
+        Height="700"
+        WindowStartupLocation="CenterScreen"
+        Background="#FFFFFF">
+    
+    <Grid Margin="40">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" HorizontalAlignment="Left">
+            <TextBlock Text="LCSync 教师端" 
+                       FontSize="28" 
+                       FontWeight="700" 
+                       Foreground="#1E293B"/>
+            <TextBlock Text="共享您的屏幕给所有学生" 
+                       FontSize="14" 
+                       Foreground="#64748B" 
+                       Margin="0,6,0,0"/>
+        </StackPanel>
+
+        <Grid Grid.Row="1" Margin="0,30,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" Orientation="Horizontal">
+                <TextBlock Text="画质：" 
+                           FontSize="14" 
+                           Foreground="#64748B" 
+                           VerticalAlignment="Center"/>
+                <ComboBox ItemsSource="{Binding Presets}" 
+                          SelectedItem="{Binding SelectedConfig}"
+                          Background="#F8FAFC" 
+                          BorderBrush="#E2E8F0" 
+                          BorderThickness="1"
+                          Padding="12,8"
+                          FontSize="14"
+                          MinWidth="220"
+                          Margin="10,0,0,0">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock>
+                                <Run Text="{Binding Name, Mode=OneWay}"/>
+                                <Run Text=" · "/>
+                                <Run Text="{Binding Width, Mode=OneWay}"/>
+                                <Run Text="x"/>
+                                <Run Text="{Binding Height, Mode=OneWay}"/>
+                                <Run Text=" · "/>
+                                <Run Text="{Binding Framerate, Mode=OneWay}"/>
+                                <Run Text="fps"/>
+                            </TextBlock>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </StackPanel>
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal">
+                <Button Content="开始广播" 
+                        Command="{Binding StartBroadcastCommand}" 
+                        IsEnabled="{Binding IsBroadcasting, Converter={StaticResource NotConverter}}"
+                        Background="#3B82F6" 
+                        Foreground="White"
+                        Padding="24,12"
+                        FontSize="14"
+                        FontWeight="600"
+                        BorderThickness="0"
+                        Cursor="Hand">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}" 
+                                    CornerRadius="8" 
+                                    Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+                
+                <Button Content="停止广播" 
+                        Command="{Binding StopBroadcastCommand}" 
+                        IsEnabled="{Binding IsBroadcasting}"
+                        Background="#EF4444" 
+                        Foreground="White"
+                        Padding="24,12"
+                        FontSize="14"
+                        FontWeight="600"
+                        Margin="12,0,0,0"
+                        BorderThickness="0"
+                        Cursor="Hand">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}" 
+                                    CornerRadius="8" 
+                                    Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="2" Margin="0,20,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="20"/>
+                <ColumnDefinition Width="280"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" 
+                    Background="#F8FAFC" 
+                    BorderBrush="#E2E8F0" 
+                    BorderThickness="1" 
+                    CornerRadius="12">
+                <Grid>
+                    <Image Source="{Binding PreviewImage}" 
+                           Stretch="Uniform" 
+                           HorizontalAlignment="Center" 
+                           VerticalAlignment="Center"
+                           Margin="20"/>
+                    <TextBlock Text="点击「开始广播」开始共享屏幕" 
+                               Foreground="#94A3B8" 
+                               FontSize="16" 
+                               HorizontalAlignment="Center" 
+                               VerticalAlignment="Center">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsBroadcasting}" Value="False">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="2" 
+                    Background="#F8FAFC" 
+                    BorderBrush="#E2E8F0" 
+                    BorderThickness="1" 
+                    CornerRadius="12"
+                    Padding="24">
+                <StackPanel>
+                    <TextBlock Text="连接信息" 
+                               FontSize="16" 
+                               FontWeight="600" 
+                               Foreground="#1E293B"
+                               Margin="0,0,0,20"/>
+
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="本机IP" Foreground="#64748B" FontSize="13"/>
+                        <TextBlock Grid.Column="1" 
+                                   Text="{Binding IpAddress}" 
+                                   Foreground="#3B82F6" 
+                                   FontWeight="600"
+                                   FontSize="13"/>
+                    </Grid>
+
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="连接人数" Foreground="#64748B" FontSize="13"/>
+                        <TextBlock Grid.Column="1" 
+                                   Foreground="#1E293B" 
+                                   FontWeight="600"
+                                   FontSize="13">
+                            <Run Text="{Binding PeerCount}"/>
+                            <Run Text=" 人"/>
+                        </TextBlock>
+                    </Grid>
+
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="状态" Foreground="#64748B" FontSize="13"/>
+                        <TextBlock Grid.Column="1" 
+                                   Text="{Binding StatusText}" 
+                                   Foreground="#1E293B"
+                                   FontSize="13"/>
+                    </Grid>
+
+                    <Separator Background="#E2E8F0" Margin="0,10,0,20"/>
+
+                    <TextBlock Text="{Binding DiagnosticInfo}" 
+                               FontSize="11"
+                               Foreground="#94A3B8"
+                               TextWrapping="Wrap"
+                               FontFamily="Consolas"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

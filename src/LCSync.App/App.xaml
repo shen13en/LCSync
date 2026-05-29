@@ -1,0 +1,32 @@
+<Application x:Class="LCSync.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:lcsync="clr-namespace:LCSync"
+             StartupUri="Views/ModeSelectionWindow.xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary>
+                    <lcsync:NotBoolConverter x:Key="NotConverter"/>
+                    <lcsync:ReverseBoolToVisibilityConverter x:Key="ReverseBoolToVisibilityConverter"/>
+                </ResourceDictionary>
+            </ResourceDictionary.MergedDictionaries>
+            
+            <Style TargetType="Button">
+                <Setter Property="Padding" Value="20,10" />
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="MinWidth" Value="120" />
+                <Setter Property="Margin" Value="5" />
+            </Style>
+            <Style TargetType="TextBlock">
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="Margin" Value="5" />
+            </Style>
+            <Style TargetType="TextBox">
+                <Setter Property="Padding" Value="5" />
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="Margin" Value="5" />
+            </Style>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>
