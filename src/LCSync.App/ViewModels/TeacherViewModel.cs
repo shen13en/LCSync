@@ -82,6 +82,74 @@ public class TeacherViewModel : ViewModelBase, IDisposable
     private DateTime _lastReportTime = DateTime.Now;
     private DateTime _sessionStartTime = DateTime.Now;
 
+    // ---- 文件共享相关 ----
+    private FileServerService? _fileServer;
+    private System.Collections.ObjectModel.ObservableCollection<FileItem> _sharedFiles = new();
+    public System.Collections.ObjectModel.ObservableCollection<FileItem> SharedFiles
+    {
+        get => _sharedFiles;
+        set => SetProperty(ref _sharedFiles, value);
+    }
+
+    private System.Collections.ObjectModel.ObservableCollection<SubmissionItem> _submissions = new();
+    public System.Collections.ObjectModel.ObservableCollection<SubmissionItem> Submissions
+    {
+        get => _submissions;
+        set => SetProperty(ref _submissions, value);
+    }
+
+    // ---- 设置相关 ----
+    private string _sharedDir = "";
+    public string SharedDir
+    {
+        get => _sharedDir;
+        set => SetProperty(ref _sharedDir, value);
+    }
+
+    private string _submissionDir = "";
+    public string SubmissionDir
+    {
+        get => _submissionDir;
+        set => SetProperty(ref _submissionDir, value);
+    }
+
+    private string _maxBandwidthText = "0";
+    public string MaxBandwidthText
+    {
+        get => _maxBandwidthText;
+        set => SetProperty(ref _maxBandwidthText, value);
+    }
+
+    private string _notificationText = "";
+    public string NotificationText
+    {
+        get => _notificationText;
+        set => SetProperty(ref _notificationText, value);
+    }
+
+    private int _selectedTabIndex = 0;
+    public int SelectedTabIndex
+    {
+        get => _selectedTabIndex;
+        set => SetProperty(ref _selectedTabIndex, value);
+    }
+
+    // ---- 文件共享统计 ----
+    public string SharedFilesSummary
+    {
+        get
+        {
+            long total = 0;
+            foreach (var f in _sharedFiles) total += f.Size;
+            return $"共 {_sharedFiles.Count} 个文件 · {FormatSize(total)}";
+        }
+    }
+
+    public string SubmissionsSummary
+    {
+        get => $"已提交: {_submissions.Count} 人";
+    }
+
     public System.Collections.Generic.List<VideoConfig> Presets { get; } = new()
     {
         VideoConfig.UltraLow,
@@ -94,6 +162,12 @@ public class TeacherViewModel : ViewModelBase, IDisposable
 
     public ICommand StartBroadcastCommand { get; }
     public ICommand StopBroadcastCommand { get; }
+    public ICommand UploadSharedFileCommand { get; }
+    public ICommand DeleteSharedFileCommand { get; }
+    public ICommand DownloadSubmissionCommand { get; }
+    public ICommand OpenSharedDirCommand { get; }
+    public ICommand OpenSubmissionDirCommand { get; }
+    public ICommand SaveSettingsCommand { get; }
 
     public TeacherViewModel(Window window)
     {
@@ -117,7 +191,35 @@ public class TeacherViewModel : ViewModelBase, IDisposable
         
         StartBroadcastCommand = new AsyncRelayCommand(StartBroadcast, () => !IsBroadcasting);
         StopBroadcastCommand = new AsyncRelayCommand(StopBroadcast, () => IsBroadcasting);
-        
+
+        // 初始化文件服务
+        _fileServer = new FileServerService(NetworkConfig.FilePort);
+        _fileServer.FileShared += OnFileShared;
+        _fileServer.SubmissionReceived += OnSubmissionReceived;
+        _fileServer.ErrorOccurred += (s, msg) =>
+            _window.Dispatcher.Invoke(() => NotificationText = msg);
+        _fileServer.Start();
+
+        // 加载配置
+        var config = Utils.ConfigManager.Load();
+        SharedDir = config.SharedDirectory;
+        SubmissionDir = config.SubmissionDirectory;
+        MaxBandwidthText = config.MaxBandwidthBytesPerSecond > 0
+            ? (config.MaxBandwidthBytesPerSecond / 1024 / 1024).ToString()
+            : "0";
+
+        // 刷新文件列表
+        RefreshFileList();
+        RefreshSubmissionList();
+
+        // 初始化命令
+        UploadSharedFileCommand = new AsyncRelayCommand(UploadSharedFile);
+        DeleteSharedFileCommand = new RelayCommand<string>(DeleteSharedFile);
+        DownloadSubmissionCommand = new RelayCommand<string>(DownloadSubmission);
+        OpenSharedDirCommand = new RelayCommand(OpenSharedDir);
+        OpenSubmissionDirCommand = new RelayCommand(OpenSubmissionDir);
+        SaveSettingsCommand = new RelayCommand(SaveSettings);
+
         DiagnosticInfo = "准备就绪，请设置画质后开始广播";
     }
 
@@ -206,102 +308,4 @@ public class TeacherViewModel : ViewModelBase, IDisposable
                 
                 var now = DateTime.Now;
                 var elapsed = (now - _lastReportTime).TotalSeconds;
-                var sessionElapsed = (now - _sessionStartTime).TotalSeconds;
-                
-                if (elapsed >= 2)
-                {
-                    double currentMbps = (_bytesSent * 8.0 / 1_000_000) / elapsed;
-                    double avgMbps = (_sessionBytesSent * 8.0 / 1_000_000) / sessionElapsed;
-                    double fps = _frameCount / elapsed;
-                    
-                    DiagnosticInfo = $"总帧:{_frameCount} 平均:{avgMbps:F2}Mbps 当前:{currentMbps:F2}Mbps {fps:F1}fps 学生:{PeerCount}";
-                    
-                    _bytesSent = 0;
-                    _lastReportTime = now;
-                }
-            }
-            catch
-            {
-            }
-        }
-    }
-
-    private async System.Threading.Tasks.Task StartBroadcast()
-    {
-        if (IsBroadcasting)
-            return;
-
-        try
-        {
-            _broadcastCts = new CancellationTokenSource();
-            _frameCount = 0;
-            _bytesSent = 0;
-            _sessionBytesSent = 0;
-            _lastReportTime = DateTime.Now;
-            _sessionStartTime = DateTime.Now;
-            
-            _captureService?.Dispose();
-            _captureService = new ScreenCaptureService(SelectedConfig.Width, SelectedConfig.Height);
-            _captureService.FrameCaptured += OnFrameCaptured;
-            _captureService.Start();
-            
-            _encoderService?.Dispose();
-            _encoderService = new VideoEncoderService(SelectedConfig);
-            _encoderService.FrameEncoded += OnFrameEncoded;
-            _encoderService.Start();
-            
-            await _signalingServer.StartAsync(NetworkConfig.SignalingPort);
-            _captureTimer.Start();
-
-            IsBroadcasting = true;
-            StatusText = "正在广播";
-            DiagnosticInfo = $"开始捕获 {SelectedConfig.Width}x{SelectedConfig.Height} @ {SelectedConfig.GetBitrateText()} {SelectedConfig.Framerate}fps";
-            FirewallUtils.AddFirewallRule(NetworkConfig.SignalingPort);
-            
-            ((AsyncRelayCommand)StartBroadcastCommand).RaiseCanExecuteChanged();
-            ((AsyncRelayCommand)StopBroadcastCommand).RaiseCanExecuteChanged();
-        }
-        catch (Exception ex)
-        {
-            StatusText = $"启动失败: {ex.Message}";
-            DiagnosticInfo = $"启动失败: {ex.Message}";
-        }
-    }
-
-    private async System.Threading.Tasks.Task StopBroadcast()
-    {
-        if (!IsBroadcasting)
-            return;
-
-        try
-        {
-            _broadcastCts?.Cancel();
-            _captureTimer.Stop();
-            _encoderService?.Stop();
-            _captureService?.Stop();
-            await _signalingServer.StopAsync();
-
-            IsBroadcasting = false;
-            StatusText = "已停止";
-            PeerCount = 0;
-            PreviewImage = null;
-            double totalMb = _sessionBytesSent * 8.0 / 1_000_000;
-            DiagnosticInfo = $"共{_frameCount}帧 总流量:{totalMb:F2}MB 平均码率:{totalMb * 8 / Math.Max(1, (DateTime.Now - _sessionStartTime).TotalSeconds):F2}Mbps";
-            
-            ((AsyncRelayCommand)StartBroadcastCommand).RaiseCanExecuteChanged();
-            ((AsyncRelayCommand)StopBroadcastCommand).RaiseCanExecuteChanged();
-        }
-        catch
-        {
-        }
-    }
-
-    public void Dispose()
-    {
-        _captureTimer.Stop();
-        _signalingServer.Dispose();
-        _captureService?.Dispose();
-        _encoderService?.Dispose();
-        _broadcastCts?.Dispose();
-    }
-}
+                var sessionElapsed = (now -
