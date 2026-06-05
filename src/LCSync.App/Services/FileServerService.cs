@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Runtime.Serialization.Json;
 using System.Text;
@@ -166,173 +167,201 @@ public class FileServerService : IDisposable
         }
     }
 
-    // ── API 处理桩方法 (将在 Task 5 中实现) ──────────────────────
+    // ── API 处理方法 ───────────────────────────────────────────
 
     private void HandleGetFileList(HttpListenerResponse response)
     {
-        RespondError(response, 501, "Not yet implemented");
+        lock (_filesLock)
+        {
+            var serializer = new DataContractJsonSerializer(typeof(List<FileItem>));
+            using var ms = new MemoryStream();
+            serializer.WriteObject(ms, _sharedFiles);
+            var json = Encoding.UTF8.GetString(ms.ToArray());
+            RespondJson(response, 200, json);
+        }
     }
 
     private void HandleDownloadFile(HttpListenerResponse response, string fileId, HttpListenerRequest request)
     {
-        RespondError(response, 501, "Not yet implemented");
+        FileItem? item;
+        lock (_filesLock)
+        {
+            item = _sharedFiles.Find(f => f.Id == fileId);
+        }
+
+        if (item == null)
+        {
+            RespondError(response, 404, "File not found");
+            return;
+        }
+
+        var filePath = Path.Combine(_config.SharedDirectory, item.Id + "_" + item.FileName);
+        if (!File.Exists(filePath))
+        {
+            RespondError(response, 404, "File not found on disk");
+            return;
+        }
+
+        var fileInfo = new FileInfo(filePath);
+        var mimeType = GetMimeType(Path.GetExtension(item.FileName));
+        response.ContentType = mimeType;
+        response.AppendHeader("Accept-Ranges", "bytes");
+        response.AppendHeader("Content-Disposition", $"attachment; filename=\"{Uri.EscapeDataString(item.FileName)}\"");
+
+        var rangeHeader = request.Headers["Range"];
+        long startByte = 0;
+        long endByte = fileInfo.Length - 1;
+
+        if (!string.IsNullOrEmpty(rangeHeader) && rangeHeader.StartsWith("bytes="))
+        {
+            var range = rangeHeader.Substring("bytes=".Length).Split('-');
+            if (range.Length > 0 && long.TryParse(range[0], out startByte))
+            {
+                if (range.Length > 1 && long.TryParse(range[1], out var parsedEnd))
+                    endByte = Math.Min(parsedEnd, fileInfo.Length - 1);
+
+                response.StatusCode = 206;
+                response.AppendHeader("Content-Range", $"bytes {startByte}-{endByte}/{fileInfo.Length}");
+            }
+        }
+
+        var contentLength = endByte - startByte + 1;
+        response.ContentLength64 = contentLength;
+
+        try
+        {
+            using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 81920);
+            fs.Seek(startByte, SeekOrigin.Begin);
+            var buffer = new byte[81920];
+            long remaining = contentLength;
+            while (remaining > 0)
+            {
+                var toRead = (int)Math.Min(buffer.Length, remaining);
+                var read = fs.Read(buffer, 0, toRead);
+                if (read == 0) break;
+
+                ApplyThrottle(read);
+
+                response.OutputStream.Write(buffer, 0, read);
+                remaining -= read;
+            }
+
+            // 更新下载计数
+            if (startByte == 0)
+            {
+                lock (_filesLock)
+                {
+                    item.DownloadCount++;
+                    SaveMetadata();
+                }
+            }
+        }
+        catch (HttpListenerException) { }
+        catch (ObjectDisposedException) { }
+        finally
+        {
+            try { response.OutputStream.Close(); } catch { }
+        }
     }
 
     private void HandleTeacherUpload(HttpListenerRequest request, HttpListenerResponse response)
     {
-        RespondError(response, 501, "Not yet implemented");
+        var fileName = ExtractFileName(request);
+        if (string.IsNullOrEmpty(fileName))
+        {
+            RespondError(response, 400, "No file provided");
+            return;
+        }
+
+        var fileData = ExtractFileData(request);
+        if (fileData == null || fileData.Length == 0)
+        {
+            RespondError(response, 400, "Empty file");
+            return;
+        }
+
+        var item = new FileItem
+        {
+            FileName = fileName,
+            Size = fileData.Length,
+            UploadTime = DateTime.Now
+        };
+
+        var savePath = Path.Combine(_config.SharedDirectory, item.Id + "_" + fileName);
+        try
+        {
+            File.WriteAllBytes(savePath, fileData);
+        }
+        catch (Exception ex)
+        {
+            RespondError(response, 500, $"Failed to save: {ex.Message}");
+            return;
+        }
+
+        lock (_filesLock)
+        {
+            _sharedFiles.Add(item);
+            SaveMetadata();
+        }
+
+        FileShared?.Invoke(this, item);
+
+        var serializer = new DataContractJsonSerializer(typeof(FileItem));
+        using var ms = new MemoryStream();
+        serializer.WriteObject(ms, item);
+        var json = Encoding.UTF8.GetString(ms.ToArray());
+        RespondJson(response, 200, json);
     }
 
     private void HandleStudentUpload(HttpListenerRequest request, HttpListenerResponse response)
     {
-        RespondError(response, 501, "Not yet implemented");
-    }
+        var studentName = ExtractFormField(request, "studentName");
+        var studentId = ExtractFormField(request, "studentId");
+        var fileName = ExtractFileName(request);
+        var fileData = ExtractFileData(request);
 
-    private void HandleGetSubmissions(HttpListenerResponse response)
-    {
-        RespondError(response, 501, "Not yet implemented");
-    }
-
-    private void HandleDownloadSubmission(HttpListenerResponse response, string submissionId)
-    {
-        RespondError(response, 501, "Not yet implemented");
-    }
-
-    private void HandleDeleteFile(HttpListenerResponse response, string fileId)
-    {
-        RespondError(response, 501, "Not yet implemented");
-    }
-
-    private void HandleStudentInfo(HttpListenerResponse response, HttpListenerRequest request)
-    {
-        RespondError(response, 501, "Not yet implemented");
-    }
-
-    // ── 辅助方法 ───────────────────────────────────────────────
-
-    private void RespondJson(HttpListenerResponse response, int statusCode, string json)
-    {
-        var buffer = Encoding.UTF8.GetBytes(json);
-        response.StatusCode = statusCode;
-        response.ContentType = "application/json; charset=utf-8";
-        response.ContentLength64 = buffer.Length;
-        response.OutputStream.Write(buffer, 0, buffer.Length);
-        response.OutputStream.Close();
-    }
-
-    private void RespondError(HttpListenerResponse response, int statusCode, string message)
-    {
-        RespondJson(response, statusCode, $"{{\"error\":\"{EscapeJson(message)}\"}}");
-    }
-
-    private static string EscapeJson(string s)
-    {
-        return s.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", "\\r");
-    }
-
-    private static string GetMimeType(string extension)
-    {
-        return extension.ToLowerInvariant() switch
+        if (string.IsNullOrEmpty(studentName) || string.IsNullOrEmpty(studentId))
         {
-            ".pdf" => "application/pdf",
-            ".doc" => "application/msword",
-            ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            ".xls" => "application/vnd.ms-excel",
-            ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            ".ppt" => "application/vnd.ms-powerpoint",
-            ".pptx" => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-            ".jpg" or ".jpeg" => "image/jpeg",
-            ".png" => "image/png",
-            ".zip" => "application/zip",
-            ".rar" => "application/x-rar-compressed",
-            ".txt" => "text/plain; charset=utf-8",
-            ".cpp" or ".c" => "text/plain; charset=utf-8",
-            ".py" => "text/plain; charset=utf-8",
-            _ => "application/octet-stream"
+            RespondError(response, 400, "studentName and studentId are required");
+            return;
+        }
+
+        if (string.IsNullOrEmpty(fileName) || fileData == null || fileData.Length == 0)
+        {
+            RespondError(response, 400, "No file provided");
+            return;
+        }
+
+        // 限制单文件 200MB
+        if (fileData.Length > 200 * 1024 * 1024)
+        {
+            RespondError(response, 413, "File too large (max 200MB)");
+            return;
+        }
+
+        var safeName = $"{SanitizeFileName(studentId)}_{SanitizeFileName(studentName)}_{SanitizeFileName(fileName)}";
+        var savePath = Path.Combine(_config.SubmissionDirectory, safeName);
+
+        var item = new SubmissionItem
+        {
+            StudentName = studentName,
+            StudentId = studentId,
+            FileName = fileName,
+            Size = fileData.Length,
+            SubmitTime = DateTime.Now,
+            StoragePath = savePath
         };
-    }
 
-    // ── 令牌桶带宽控制 ─────────────────────────────────────────
-
-    private void ApplyThrottle(int bytesToSend)
-    {
-        if (_config.MaxBandwidthBytesPerSecond <= 0) return;
-
-        lock (_throttleLock)
-        {
-            var now = DateTime.Now;
-            var elapsed = (now - _lastRefill).TotalSeconds;
-            _availableBytes = Math.Min(_config.MaxBandwidthBytesPerSecond,
-                _availableBytes + (long)(_config.MaxBandwidthBytesPerSecond * elapsed));
-            _lastRefill = now;
-
-            if (_availableBytes < bytesToSend)
-            {
-                var deficit = bytesToSend - _availableBytes;
-                var delayMs = (int)(deficit * 1000.0 / _config.MaxBandwidthBytesPerSecond) + 1;
-                Thread.Sleep(Math.Min(delayMs, 1000));
-                _availableBytes = 0;
-                _lastRefill = DateTime.Now;
-            }
-            else
-            {
-                _availableBytes -= bytesToSend;
-            }
-        }
-    }
-
-    // ── 元数据持久化 ───────────────────────────────────────────
-
-    private void SaveMetadata()
-    {
         try
         {
-            var data = new MetadataWrapper
-            {
-                Files = _sharedFiles,
-                Submissions = _submissions
-            };
-            using var ms = new MemoryStream();
-            var serializer = new DataContractJsonSerializer(typeof(MetadataWrapper));
-            serializer.WriteObject(ms, data);
-            File.WriteAllText(_metadataPath, Encoding.UTF8.GetString(ms.ToArray()), Encoding.UTF8);
+            File.WriteAllBytes(savePath, fileData);
         }
-        catch { }
-    }
-
-    private void LoadMetadata()
-    {
-        try
+        catch (Exception ex)
         {
-            if (!File.Exists(_metadataPath)) return;
-            var json = File.ReadAllText(_metadataPath, Encoding.UTF8);
-            using var ms = new MemoryStream(Encoding.UTF8.GetBytes(json));
-            var serializer = new DataContractJsonSerializer(typeof(MetadataWrapper));
-            var data = (MetadataWrapper)serializer.ReadObject(ms)!;
-            lock (_filesLock) { _sharedFiles.Clear(); _sharedFiles.AddRange(data.Files ?? new List<FileItem>()); }
-            lock (_submissionsLock) { _submissions.Clear(); _submissions.AddRange(data.Submissions ?? new List<SubmissionItem>()); }
+            RespondError(response, 500, $"Failed to save: {ex.Message}");
+            return;
         }
-        catch { }
-    }
 
-    // ── IDisposable ────────────────────────────────────────────
-
-    public void Dispose()
-    {
-        if (_disposed) return;
-        _disposed = true;
-        Stop();
-        SaveMetadata();
-    }
-}
-
-// IMPORTANT: MetadataWrapper uses DataContractJsonSerializer - needs [DataContract]/[DataMember]
-[System.Runtime.Serialization.DataContract]
-internal class MetadataWrapper
-{
-    [System.Runtime.Serialization.DataMember]
-    public List<FileItem> Files { get; set; } = new();
-
-    [System.Runtime.Serialization.DataMember]
-    public List<SubmissionItem> Submissions { get; set; } = new();
-}
+        lock (_submissionsLock)
+        {
+            _submissions.Add(it
