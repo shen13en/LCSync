@@ -72,6 +72,34 @@ public class RelayCommand : ICommand
     }
 }
 
+public class RelayCommand<T> : ICommand
+{
+    private readonly Action<T?> _execute;
+    private readonly Func<T?, bool>? _canExecute;
+
+    public RelayCommand(Action<T?> execute, Func<T?, bool>? canExecute = null)
+    {
+        _execute = execute ?? throw new ArgumentNullException(nameof(execute));
+        _canExecute = canExecute;
+    }
+
+    public event EventHandler? CanExecuteChanged
+    {
+        add => CommandManager.RequerySuggested += value;
+        remove => CommandManager.RequerySuggested -= value;
+    }
+
+    public bool CanExecute(object? parameter)
+    {
+        return _canExecute == null || _canExecute((T?)parameter);
+    }
+
+    public void Execute(object? parameter)
+    {
+        _execute((T?)parameter);
+    }
+}
+
 public class AsyncRelayCommand : ICommand
 {
     private readonly Func<object?, System.Threading.Tasks.Task> _execute;
@@ -155,6 +183,61 @@ public class ReverseBoolToVisibilityConverter : IValueConverter
             return boolValue ? Visibility.Collapsed : Visibility.Visible;
         }
         return Visibility.Visible;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+public class TabIndexConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is int tabIndex && parameter is string paramStr && int.TryParse(paramStr, out int target))
+            return tabIndex == target;
+        return false;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is bool isChecked && isChecked && parameter is string paramStr && int.TryParse(paramStr, out int target))
+            return target;
+        return Binding.DoNothing;
+    }
+}
+
+public class TabVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is int tabIndex && parameter is string paramStr && int.TryParse(paramStr, out int target))
+            return tabIndex == target ? Visibility.Visible : Visibility.Collapsed;
+        return Visibility.Collapsed;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+public class FileSizeConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is long bytes)
+        {
+            if (bytes >= 1024 * 1024 * 1024)
+                return $"{bytes / (1024.0 * 1024 * 1024):F1} GB";
+            if (bytes >= 1024 * 1024)
+                return $"{bytes / (1024.0 * 1024):F1} MB";
+            if (bytes >= 1024)
+                return $"{bytes / 1024.0:F1} KB";
+            return $"{bytes} B";
+        }
+        return "0 B";
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

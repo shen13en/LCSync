@@ -9,6 +9,9 @@
                 <ResourceDictionary>
                     <lcsync:NotBoolConverter x:Key="NotConverter"/>
                     <lcsync:ReverseBoolToVisibilityConverter x:Key="ReverseBoolToVisibilityConverter"/>
+                    <lcsync:TabIndexConverter x:Key="TabIndexConverter"/>
+                    <lcsync:TabVisibilityConverter x:Key="TabVisibilityConverter"/>
+                    <lcsync:FileSizeConverter x:Key="FileSizeConverter"/>
                 </ResourceDictionary>
             </ResourceDictionary.MergedDictionaries>
             
@@ -27,6 +30,31 @@
                 <Setter Property="FontSize" Value="14" />
                 <Setter Property="Margin" Value="5" />
             </Style>
+
+            <Style x:Key="TabRadioStyle" TargetType="RadioButton">
+                <Setter Property="Padding" Value="20,14"/>
+                <Setter Property="FontSize" Value="14"/>
+                <Setter Property="Foreground" Value="#64748B"/>
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Style.Triggers>
+                    <Trigger Property="IsChecked" Value="True">
+                        <Setter Property="Foreground" Value="#3B82F6"/>
+                        <Setter Property="FontWeight" Value="600"/>
+                    </Trigger>
+                </Style.Triggers>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="RadioButton">
+                            <Border Background="{TemplateBinding Background}" BorderThickness="0,0,0,2" BorderBrush="{TemplateBinding Foreground}" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
         </ResourceDictionary>
     </Application.Resources>
 </Application>
