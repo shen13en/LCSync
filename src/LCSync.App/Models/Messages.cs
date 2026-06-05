@@ -9,6 +9,8 @@ public enum MessageType : byte
     Leave = 0x03,
     PeerCount = 0x04,
     VideoFrame = 0x10,
+    FileNotify = 0x30,      // 教师通知学生有新文件
+    SubmissionNotify = 0x31, // 学生通知教师已提交
     Error = 0xFF
 }
 

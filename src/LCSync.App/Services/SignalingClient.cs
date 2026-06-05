@@ -19,6 +19,8 @@ public class SignalingClient : IDisposable
     public event EventHandler? Disconnected;
     public event EventHandler<int>? PeerCountUpdated;
     public event EventHandler<byte[]>? VideoFrameReceived;
+    public event EventHandler<string>? FileNotifyReceived;
+    public event EventHandler<string>? SubmissionNotifyReceived;
 
     public bool IsConnected => _isConnected;
 
@@ -129,6 +131,22 @@ public class SignalingClient : IDisposable
 
                 case MessageType.VideoFrame:
                     VideoFrameReceived?.Invoke(this, payload);
+                    break;
+
+                case MessageType.FileNotify:
+                    if (payload.Length > 0)
+                    {
+                        var fileName = System.Text.Encoding.UTF8.GetString(payload);
+                        FileNotifyReceived?.Invoke(this, fileName);
+                    }
+                    break;
+
+                case MessageType.SubmissionNotify:
+                    if (payload.Length > 0)
+                    {
+                        var studentName = System.Text.Encoding.UTF8.GetString(payload);
+                        SubmissionNotifyReceived?.Invoke(this, studentName);
+                    }
                     break;
             }
         }

@@ -118,6 +118,52 @@ public class SignalingServer : IDisposable
         }
     }
 
+    public void BroadcastFileNotify(string fileName)
+    {
+        if (!IsRunning)
+            return;
+
+        var payload = System.Text.Encoding.UTF8.GetBytes(fileName);
+        byte[] msg = new byte[5 + payload.Length];
+        msg[0] = (byte)MessageType.FileNotify;
+        Buffer.BlockCopy(BitConverter.GetBytes(payload.Length), 0, msg, 1, 4);
+        Buffer.BlockCopy(payload, 0, msg, 5, payload.Length);
+
+        foreach (var student in _students.Values)
+        {
+            try
+            {
+                var ws = student.Context.WebSocket;
+                if (ws.IsAlive)
+                    ws.Send(msg);
+            }
+            catch { }
+        }
+    }
+
+    public void SendSubmissionNotify(string studentName)
+    {
+        if (!IsRunning)
+            return;
+
+        var payload = System.Text.Encoding.UTF8.GetBytes(studentName);
+        byte[] msg = new byte[5 + payload.Length];
+        msg[0] = (byte)MessageType.SubmissionNotify;
+        Buffer.BlockCopy(BitConverter.GetBytes(payload.Length), 0, msg, 1, 4);
+        Buffer.BlockCopy(payload, 0, msg, 5, payload.Length);
+
+        foreach (var student in _students.Values)
+        {
+            try
+            {
+                var ws = student.Context.WebSocket;
+                if (ws.IsAlive)
+                    ws.Send(msg);
+            }
+            catch { }
+        }
+    }
+
     public void Dispose()
     {
         if (_disposed)
