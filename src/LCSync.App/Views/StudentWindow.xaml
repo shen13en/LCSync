@@ -6,121 +6,264 @@
         Height="700"
         WindowStartupLocation="CenterScreen"
         Background="#FFFFFF">
-    
+
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Background="#1E293B">
-            <Grid>
-                <Viewbox Stretch="Uniform" StretchDirection="Both">
-                    <Image Source="{Binding VideoFrame}" 
-                           Stretch="Fill" 
-                           Width="1920" 
-                           Height="1080"/>
-                </Viewbox>
-                
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <StackPanel.Style>
-                        <Style TargetType="StackPanel">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsConnected}" Value="False">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </StackPanel.Style>
-                    
-                    <Border Background="White" 
-                            BorderBrush="#E2E8F0" 
-                            BorderThickness="1" 
-                            CornerRadius="16"
-                            Padding="60,50">
-                        <StackPanel>
-                            <TextBlock Text="📺" FontSize="72" HorizontalAlignment="Center"/>
-                            <TextBlock Text="LCSync 学生端" 
-                                       FontSize="28" 
-                                       FontWeight="700" 
-                                       Foreground="#1E293B"
-                                       HorizontalAlignment="Center"
-                                       Margin="0,24,0,10"/>
-                            <TextBlock Text="观看教师屏幕共享" 
-                                       FontSize="15" 
-                                       Foreground="#64748B" 
-                                       HorizontalAlignment="Center"/>
-                            
-                            <StackPanel Margin="0,40,0,0">
-                                <TextBlock Text="教师IP地址" 
-                                           FontSize="13" 
-                                           Foreground="#475569" 
-                                           Margin="0,0,0,8"/>
-                                <TextBox Text="{Binding ServerIp, UpdateSourceTrigger=PropertyChanged}" 
-                                         Background="#F8FAFC" 
-                                         BorderBrush="#E2E8F0" 
-                                         BorderThickness="1"
-                                         Padding="16,14"
-                                         FontSize="15"
-                                         MinWidth="280"/>
-                                
-                                <Button Content="连接" 
-                                        Command="{Binding ConnectCommand}" 
-                                        IsEnabled="{Binding IsConnected, Converter={StaticResource NotConverter}}"
-                                        Background="#3B82F6" 
-                                        Foreground="White"
-                                        Padding="0,14"
-                                        FontSize="15"
-                                        FontWeight="600"
-                                        Margin="0,20,0,0"
-                                        BorderThickness="0"
-                                        Cursor="Hand">
-                                    <Button.Template>
-                                        <ControlTemplate TargetType="Button">
-                                            <Border Background="{TemplateBinding Background}" 
-                                                    CornerRadius="10" 
-                                                    Padding="{TemplateBinding Padding}">
-                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                            </Border>
-                                        </ControlTemplate>
-                                    </Button.Template>
-                                </Button>
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
-                
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <StackPanel.Style>
-                        <Style TargetType="StackPanel">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                            <Style.Triggers>
-                                <MultiDataTrigger>
-                                    <MultiDataTrigger.Conditions>
-                                        <Condition Binding="{Binding IsConnected}" Value="True"/>
-                                        <Condition Binding="{Binding VideoFrame}" Value="{x:Null}"/>
-                                    </MultiDataTrigger.Conditions>
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                </MultiDataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </StackPanel.Style>
-                    
-                    <TextBlock Text="🔄" FontSize="48" HorizontalAlignment="Center"/>
-                    <TextBlock Text="正在接收视频..." 
-                               Foreground="#64748B" 
-                               FontSize="16" 
-                               HorizontalAlignment="Center"
-                               Margin="0,20,0,0"/>
-                </StackPanel>
-            </Grid>
+        <!-- 顶部导航标签 -->
+        <Border Grid.Row="0" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
+            <StackPanel Orientation="Horizontal" Margin="20,0">
+                <RadioButton Content="🖥 屏幕"
+                             IsChecked="{Binding StudentTabIndex, Converter={StaticResource TabIndexConverter}, ConverterParameter=0}"
+                             Style="{StaticResource TabRadioStyle}"/>
+                <RadioButton Content="📁 共享文件"
+                             IsChecked="{Binding StudentTabIndex, Converter={StaticResource TabIndexConverter}, ConverterParameter=1}"
+                             Style="{StaticResource TabRadioStyle}"/>
+                <RadioButton Content="📝 提交作业"
+                             IsChecked="{Binding StudentTabIndex, Converter={StaticResource TabIndexConverter}, ConverterParameter=2}"
+                             Style="{StaticResource TabRadioStyle}"/>
+            </StackPanel>
         </Border>
 
-        <Border Grid.Row="1" 
-                Background="White" 
-                BorderBrush="#E2E8F0" 
-                BorderThickness="0,1,0,0">
+        <!-- 内容区域 -->
+        <Grid Grid.Row="1">
+            <!-- Tab 0: 屏幕播放（原有内容） -->
+            <Grid Visibility="{Binding StudentTabIndex, Converter={StaticResource TabVisibilityConverter}, ConverterParameter=0}">
+                <Border Background="#1E293B">
+                    <Grid>
+                        <Viewbox Stretch="Uniform" StretchDirection="Both">
+                            <Image Source="{Binding VideoFrame}" Stretch="Fill" Width="1920" Height="1080"/>
+                        </Viewbox>
+
+                        <!-- 未连接时的界面 -->
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsConnected}" Value="False">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+
+                            <Border Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="16" Padding="60,50">
+                                <StackPanel>
+                                    <TextBlock Text="📺" FontSize="72" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="LCSync 学生端"
+                                               FontSize="28" FontWeight="700" Foreground="#1E293B"
+                                               HorizontalAlignment="Center" Margin="0,24,0,10"/>
+                                    <TextBlock Text="观看教师屏幕共享"
+                                               FontSize="15" Foreground="#64748B" HorizontalAlignment="Center"/>
+
+                                    <StackPanel Margin="0,40,0,0">
+                                        <TextBlock Text="教师IP地址" FontSize="13" Foreground="#475569" Margin="0,0,0,8"/>
+                                        <TextBox Text="{Binding ServerIp, UpdateSourceTrigger=PropertyChanged}"
+                                                 Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1"
+                                                 Padding="16,14" FontSize="15" MinWidth="280"/>
+
+                                        <Button Content="连接"
+                                                Command="{Binding ConnectCommand}"
+                                                IsEnabled="{Binding IsConnected, Converter={StaticResource NotConverter}}"
+                                                Background="#3B82F6" Foreground="White"
+                                                Padding="0,14" FontSize="15" FontWeight="600"
+                                                Margin="0,20,0,0" BorderThickness="0" Cursor="Hand">
+                                            <Button.Template>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{TemplateBinding Background}" CornerRadius="10" Padding="{TemplateBinding Padding}">
+                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Button.Template>
+                                        </Button>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- 连接中界面 -->
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding IsConnected}" Value="True"/>
+                                                <Condition Binding="{Binding VideoFrame}" Value="{x:Null}"/>
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </MultiDataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+
+                            <TextBlock Text="🔄" FontSize="48" HorizontalAlignment="Center"/>
+                            <TextBlock Text="正在接收视频..." Foreground="#64748B" FontSize="16"
+                                       HorizontalAlignment="Center" Margin="0,20,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- Tab 1: 共享文件 -->
+            <Grid Visibility="{Binding StudentTabIndex, Converter={StaticResource TabVisibilityConverter}, ConverterParameter=1}"
+                  Margin="40">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
+                    <TextBlock Text="📁 教师共享文件" FontSize="28" FontWeight="700" Foreground="#1E293B"/>
+                    <Button Content="🔄 刷新"
+                            Command="{Binding RefreshFileListCommand}"
+                            Background="#E2E8F0" Foreground="#475569"
+                            Padding="16,8" FontSize="13" FontWeight="600"
+                            Margin="20,5,0,0" BorderThickness="0" Cursor="Hand"
+                            VerticalAlignment="Center">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border Background="{TemplateBinding Background}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </StackPanel>
+
+                <TextBlock Grid.Row="1" Text="{Binding FileNotificationText}"
+                           Foreground="#10B981" FontSize="13" Margin="0,8,0,0"/>
+
+                <Border Grid.Row="2" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12" Margin="0,12,0,0">
+                    <ScrollViewer>
+                        <ItemsControl ItemsSource="{Binding SharedFiles}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="16,12">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="{Binding FileName}" FontWeight="600" Foreground="#1E293B" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Foreground="#64748B" VerticalAlignment="Center">
+                                                <Run Text="{Binding Size, Converter={StaticResource FileSizeConverter}}"/>
+                                            </TextBlock>
+                                            <Button Grid.Column="2" Content="下载"
+                                                    Command="{Binding Source={RelativeSource FindAncestor, AncestorType={x:Type Window}}, Path=DataContext.DownloadFileCommand}"
+                                                    CommandParameter="{Binding Id}"
+                                                    Background="#DBEAFE" Foreground="#2563EB"
+                                                    Padding="16,8" FontSize="13" FontWeight="600" BorderThickness="0" Cursor="Hand">
+                                                <Button.Template>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border Background="{TemplateBinding Background}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                    </ControlTemplate>
+                                                </Button.Template>
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Border>
+
+                <TextBlock Grid.Row="3" Text="{Binding DownloadStatus}" Foreground="#64748B" FontSize="12" Margin="0,8,0,0"/>
+            </Grid>
+
+            <!-- Tab 2: 提交作业 -->
+            <Grid Visibility="{Binding StudentTabIndex, Converter={StaticResource TabVisibilityConverter}, ConverterParameter=2}"
+                  Margin="40">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="📝 提交作业" FontSize="28" FontWeight="700" Foreground="#1E293B"
+                           Margin="0,0,0,20"/>
+
+                <!-- 学生信息 -->
+                <Border Grid.Row="1" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12" Padding="20" Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock Text="您的信息" FontSize="14" FontWeight="600" Foreground="#475569" Margin="0,0,0,12"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="200"/>
+                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="200"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="姓名：" Foreground="#64748B" VerticalAlignment="Center" FontSize="14"/>
+                            <TextBox Grid.Column="1" Text="{Binding StudentName}" Background="White" BorderBrush="#E2E8F0" Padding="10,8" FontSize="14"/>
+                            <TextBlock Grid.Column="3" Text="学号：" Foreground="#64748B" VerticalAlignment="Center" FontSize="14"/>
+                            <TextBox Grid.Column="4" Text="{Binding StudentIdCard}" Background="White" BorderBrush="#E2E8F0" Padding="10,8" FontSize="14"/>
+                            <Button Grid.Column="5" Content="保存信息"
+                                    Command="{Binding SaveStudentInfoCommand}"
+                                    Background="#E2E8F0" Foreground="#475569"
+                                    Padding="12,8" FontSize="12" Margin="8,0,0,0" BorderThickness="0" Cursor="Hand"
+                                    VerticalAlignment="Center"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- 文件选择与提交 -->
+                <Border Grid.Row="2" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12" Padding="20" Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock Text="提交作业" FontSize="14" FontWeight="600" Foreground="#475569" Margin="0,0,0,12"/>
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="选择文件"
+                                    Command="{Binding SelectFileCommand}"
+                                    Background="#E2E8F0" Foreground="#475569"
+                                    Padding="16,10" FontSize="14" BorderThickness="0" Cursor="Hand"/>
+                            <TextBlock Text="{Binding SelectedFileName}" Foreground="#64748B" VerticalAlignment="Center" Margin="12,0,20,0" FontSize="14"/>
+                            <Button Content="📤 提交作业"
+                                    Command="{Binding SubmitFileCommand}"
+                                    Background="#3B82F6" Foreground="White"
+                                    Padding="20,10" FontSize="14" FontWeight="600" BorderThickness="0" Cursor="Hand">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="{TemplateBinding Background}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- 通知信息 -->
+                <TextBlock Grid.Row="3" Text="{Binding FileNotificationText}"
+                           Foreground="#10B981" FontSize="13" Margin="0,0,0,12"/>
+
+                <!-- 已提交记录 -->
+                <Border Grid.Row="4" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12" Padding="20">
+                    <StackPanel>
+                        <TextBlock Text="我提交的记录" FontSize="14" FontWeight="600" Foreground="#475569" Margin="0,0,0,12"/>
+                        <TextBlock Text="提交后刷新查看" Foreground="#94A3B8" FontSize="13"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!-- 底部状态栏（无在线人数） -->
+        <Border Grid.Row="2" Background="White" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0">
             <Grid Margin="24">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -129,58 +272,26 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0" Orientation="Horizontal">
-                    <Border Background="#F8FAFC" 
-                            BorderBrush="#E2E8F0" 
-                            BorderThickness="1"
-                            CornerRadius="8"
-                            Padding="14,10">
+                    <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="14,10">
                         <TextBlock Foreground="#64748B" FontSize="13">
                             <Run Text="状态："/>
                             <Run Text="{Binding StatusText}" Foreground="#10B981" FontWeight="600"/>
                         </TextBlock>
                     </Border>
 
-                    <Border Background="#F8FAFC" 
-                            BorderBrush="#E2E8F0" 
-                            BorderThickness="1"
-                            CornerRadius="8"
-                            Padding="14,10"
-                            Margin="12,0,0,0">
-                        <TextBlock Foreground="#64748B" FontSize="13">
-                            <Run Text="在线："/>
-                            <Run Text="{Binding PeerCount}" Foreground="#1E293B" FontWeight="600"/>
-                            <Run Text=" 人"/>
-                        </TextBlock>
-                    </Border>
-                    
-                    <Border Background="#F8FAFC" 
-                            BorderBrush="#E2E8F0" 
-                            BorderThickness="1"
-                            CornerRadius="8"
-                            Padding="14,10"
-                            Margin="12,0,0,0">
-                        <TextBlock Text="{Binding DiagnosticInfo}" 
-                                   FontSize="11"
-                                   Foreground="#64748B"
-                                   FontFamily="Consolas"/>
+                    <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="12,0,0,0">
+                        <TextBlock Text="{Binding DiagnosticInfo}" FontSize="11" Foreground="#64748B" FontFamily="Consolas"/>
                     </Border>
                 </StackPanel>
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
-                    <Button Content="全屏" 
+                    <Button Content="⛶ 全屏"
                             Click="ToggleFullscreen"
-                            Background="#3B82F6" 
-                            Foreground="White"
-                            Padding="20,10"
-                            FontSize="13"
-                            FontWeight="600"
-                            BorderThickness="0"
-                            Cursor="Hand">
+                            Background="#3B82F6" Foreground="White"
+                            Padding="20,10" FontSize="13" FontWeight="600" BorderThickness="0" Cursor="Hand">
                         <Button.Template>
                             <ControlTemplate TargetType="Button">
-                                <Border Background="{TemplateBinding Background}" 
-                                        CornerRadius="8" 
-                                        Padding="{TemplateBinding Padding}">
+                                <Border Background="{TemplateBinding Background}" CornerRadius="8" Padding="{TemplateBinding Padding}">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="⛶" FontSize="16" Margin="0,0,8,0"/>
                                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -189,23 +300,16 @@
                             </ControlTemplate>
                         </Button.Template>
                     </Button>
-                    
-                    <Button Content="断开" 
-                            Command="{Binding DisconnectCommand}" 
+
+                    <Button Content="断开"
+                            Command="{Binding DisconnectCommand}"
                             IsEnabled="{Binding IsConnected}"
-                            Background="#EF4444" 
-                            Foreground="White"
-                            Padding="20,10"
-                            FontSize="13"
-                            FontWeight="600"
-                            Margin="12,0,0,0"
-                            BorderThickness="0"
-                            Cursor="Hand">
+                            Background="#EF4444" Foreground="White"
+                            Padding="20,10" FontSize="13" FontWeight="600"
+                            Margin="12,0,0,0" BorderThickness="0" Cursor="Hand">
                         <Button.Template>
                             <ControlTemplate TargetType="Button">
-                                <Border Background="{TemplateBinding Background}" 
-                                        CornerRadius="8" 
-                                        Padding="{TemplateBinding Padding}">
+                                <Border Background="{TemplateBinding Background}" CornerRadius="8" Padding="{TemplateBinding Padding}">
                                     <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
                             </ControlTemplate>
