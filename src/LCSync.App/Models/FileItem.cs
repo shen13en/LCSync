@@ -1,12 +1,11 @@
 using System;
+using System.Runtime.Serialization;
 
 namespace LCSync.Models;
 
+[DataContract]
 public class FileItem
 {
-    public string Id { get; set; } = Guid.NewGuid().ToString("N");
-    public string FileName { get; set; } = string.Empty;
-    public long Size { get; set; }
-    public DateTime UploadTime { get; set; }
-    public int DownloadCount { get; set; }
-}
+    [DataMember] public string Id { get; set; } = Guid.NewGuid().ToString("N");
+    [DataMember] public string FileName { get; set; } = string.Empty;
+    [DataMember] public long Size { get; set; }

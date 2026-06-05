@@ -1,13 +1,15 @@
 using System;
 using System.IO;
+using System.Runtime.Serialization;
 
 namespace LCSync.Models;
 
+[DataContract]
 public class StorageConfig
 {
-    public string SharedDirectory { get; set; } = string.Empty;
-    public string SubmissionDirectory { get; set; } = string.Empty;
-    public long MaxBandwidthBytesPerSecond { get; set; } = 0;
+    [DataMember] public string SharedDirectory { get; set; } = string.Empty;
+    [DataMember] public string SubmissionDirectory { get; set; } = string.Empty;
+    [DataMember] public long MaxBandwidthBytesPerSecond { get; set; } = 0;
 
     public static string GetDefaultSharedDir()
     {
@@ -26,7 +28,4 @@ public class StorageConfig
     public static string GetDefaultConfigPath()
     {
         return Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "LCSync", "settings.json");
-    }
-}
+            Environment.GetFolderPath(Environ

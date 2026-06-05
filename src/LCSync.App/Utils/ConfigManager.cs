@@ -8,7 +8,7 @@ namespace LCSync.Utils;
 
 public static class ConfigManager
 {
-    private static StorageConfig? _cached;
+    private static volatile StorageConfig? _cached;
     private static readonly object _lock = new();
 
     public static StorageConfig Load()
@@ -37,9 +37,9 @@ public static class ConfigManager
                     _cached = config;
                     return config;
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // fall through to default
+                    System.Diagnostics.Debug.WriteLine($"ConfigManager: failed to load config, using defaults. {ex.Message}");
                 }
             }
 
@@ -77,7 +77,4 @@ public static class ConfigManager
         if (!string.IsNullOrEmpty(config.SharedDirectory) && !Directory.Exists(config.SharedDirectory))
             Directory.CreateDirectory(config.SharedDirectory);
 
-        if (!string.IsNullOrEmpty(config.SubmissionDirectory) && !Directory.Exists(config.SubmissionDirectory))
-            Directory.CreateDirectory(config.SubmissionDirectory);
-    }
-}
+        if (!string.IsNullOrEmpty(config.SubmissionDirectory) && !Directory.Exists(

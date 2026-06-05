@@ -1,14 +1,13 @@
 using System;
+using System.Runtime.Serialization;
 
 namespace LCSync.Models;
 
+[DataContract]
 public class SubmissionItem
 {
-    public string Id { get; set; } = Guid.NewGuid().ToString("N");
-    public string StudentName { get; set; } = string.Empty;
-    public string StudentId { get; set; } = string.Empty;
-    public string FileName { get; set; } = string.Empty;
-    public long Size { get; set; }
-    public DateTime SubmitTime { get; set; }
-    public string StoragePath { get; set; } = string.Empty;
-}
+    [DataMember] public string Id { get; set; } = Guid.NewGuid().ToString("N");
+    [DataMember] public string StudentName { get; set; } = string.Empty;
+    [DataMember] public string StudentId { get; set; } = string.Empty;
+    [DataMember] public string FileName { get; set; } = string.Empty;
+    [DataMember] public long Size { get
