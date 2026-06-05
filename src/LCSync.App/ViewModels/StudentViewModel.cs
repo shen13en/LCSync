@@ -65,8 +65,95 @@ public class StudentViewModel : ViewModelBase, IDisposable
     private DateTime _lastUpdateTime = DateTime.Now;
     private long _lastBytes = 0;
 
+    // ---- 文件共享相关 ----
+    private System.Collections.ObjectModel.ObservableCollection<FileItem> _sharedFiles = new();
+    public System.Collections.ObjectModel.ObservableCollection<FileItem> SharedFiles
+    {
+        get => _sharedFiles;
+        set => SetProperty(ref _sharedFiles, value);
+    }
+
+    // ---- 学生信息 ----
+    private string _studentName = "";
+    public string StudentName
+    {
+        get => _studentName;
+        set => SetProperty(ref _studentName, value);
+    }
+
+    private string _studentIdCard = "";
+    public string StudentIdCard
+    {
+        get => _studentIdCard;
+        set => SetProperty(ref _studentIdCard, value);
+    }
+
+    // ---- 文件上传 ----
+    private string _selectedFilePath = "";
+    public string SelectedFilePath
+    {
+        get => _selectedFilePath;
+        set => SetProperty(ref _selectedFilePath, value);
+    }
+
+    private string _selectedFileName = "";
+    public string SelectedFileName
+    {
+        get => _selectedFileName;
+        set => SetProperty(ref _selectedFileName, value);
+    }
+
+    // ---- 下载状态 ----
+    private double _downloadProgress;
+    public double DownloadProgress
+    {
+        get => _downloadProgress;
+        set => SetProperty(ref _downloadProgress, value);
+    }
+
+    private string _downloadStatus = "";
+    public string DownloadStatus
+    {
+        get => _downloadStatus;
+        set => SetProperty(ref _downloadStatus, value);
+    }
+
+    private string _fileNotificationText = "";
+    public string FileNotificationText
+    {
+        get => _fileNotificationText;
+        set => SetProperty(ref _fileNotificationText, value);
+    }
+
+    // ---- 已提交记录 ----
+    private System.Collections.ObjectModel.ObservableCollection<SubmissionItem> _mySubmissions = new();
+    public System.Collections.ObjectModel.ObservableCollection<SubmissionItem> MySubmissions
+    {
+        get => _mySubmissions;
+        set => SetProperty(ref _mySubmissions, value);
+    }
+
+    private int _studentTabIndex = 0;
+    public int StudentTabIndex
+    {
+        get => _studentTabIndex;
+        set => SetProperty(ref _studentTabIndex, value);
+    }
+
+    private string _serverFileUrl = "";
+    public string ServerFileUrl
+    {
+        get => _serverFileUrl;
+        set => SetProperty(ref _serverFileUrl, value);
+    }
+
     public ICommand ConnectCommand { get; }
     public ICommand DisconnectCommand { get; }
+    public ICommand RefreshFileListCommand { get; }
+    public ICommand DownloadFileCommand { get; }
+    public ICommand SelectFileCommand { get; }
+    public ICommand SubmitFileCommand { get; }
+    public ICommand SaveStudentInfoCommand { get; }
 
     public StudentViewModel(Window window)
     {
@@ -75,6 +162,14 @@ public class StudentViewModel : ViewModelBase, IDisposable
 
         _client.Connected += OnConnected;
         _client.Disconnected += OnDisconnected;
+        _client.FileNotifyReceived += (s, fileName) =>
+        {
+            _window.Dispatcher.Invoke(async () =>
+            {
+                FileNotificationText = $"教师更新了文件: {fileName}";
+                await RefreshFileList();
+            });
+        };
         _client.PeerCountUpdated += OnPeerCountUpdated;
         _client.VideoFrameReceived += OnVideoFrameReceived;
 
@@ -83,6 +178,16 @@ public class StudentViewModel : ViewModelBase, IDisposable
         ConnectCommand = new AsyncRelayCommand(Connect, () => !IsConnected && !string.IsNullOrWhiteSpace(ServerIp));
         DisconnectCommand = new AsyncRelayCommand(Disconnect, () => IsConnected);
         
+        // 初始化文件相关命令
+        RefreshFileListCommand = new AsyncRelayCommand(RefreshFileList);
+        DownloadFileCommand = new RelayCommand<string>(DownloadFile);
+        SelectFileCommand = new RelayCommand(SelectFile);
+        SubmitFileCommand = new AsyncRelayCommand(SubmitFile);
+        SaveStudentInfoCommand = new RelayCommand(SaveStudentInfo);
+
+        // 加载本地缓存的学生信息
+        LoadStudentInfo();
+
         DiagnosticInfo = "等待连接...";
     }
 
@@ -102,109 +207,4 @@ public class StudentViewModel : ViewModelBase, IDisposable
             _totalBytes = 0;
             _lastUpdateTime = DateTime.Now;
             _lastBytes = 0;
-            DiagnosticInfo = "已连接，等待视频数据...";
-            
-            ((AsyncRelayCommand)ConnectCommand).RaiseCanExecuteChanged();
-            ((AsyncRelayCommand)DisconnectCommand).RaiseCanExecuteChanged();
-        });
-    }
-
-    private void OnDisconnected(object? sender, EventArgs e)
-    {
-        _window.Dispatcher.Invoke(() =>
-        {
-            IsConnected = false;
-            StatusText = "已断开";
-            DiagnosticInfo = "连接已断开";
-            Disconnected?.Invoke(this, EventArgs.Empty);
-            
-            ((AsyncRelayCommand)ConnectCommand).RaiseCanExecuteChanged();
-            ((AsyncRelayCommand)DisconnectCommand).RaiseCanExecuteChanged();
-        });
-    }
-
-    private void OnPeerCountUpdated(object? sender, int count)
-    {
-        _window.Dispatcher.Invoke(() => PeerCount = count);
-    }
-
-    private void OnVideoFrameReceived(object? sender, byte[] frameData)
-    {
-        try
-        {
-            _frameCount++;
-            _totalBytes += frameData.Length;
-
-            _window.Dispatcher.BeginInvoke(() =>
-            {
-                try
-                {
-                    using (var stream = new MemoryStream(frameData))
-                    {
-                        var bitmap = new BitmapImage();
-                        bitmap.BeginInit();
-                        bitmap.StreamSource = stream;
-                        bitmap.CacheOption = BitmapCacheOption.OnLoad;
-                        bitmap.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
-                        bitmap.EndInit();
-                        bitmap.Freeze();
-                        VideoFrame = bitmap;
-                    }
-
-                    var now = DateTime.Now;
-                    if ((now - _lastUpdateTime).TotalSeconds >= 1)
-                    {
-                        double bitrate = (_totalBytes - _lastBytes) * 8.0 / 1024.0 / 1024.0 / (now - _lastUpdateTime).TotalSeconds;
-                        DiagnosticInfo = $"已接收 {_frameCount} 帧 · {_totalBytes / 1024.0 / 1024.0:F1} MB · {bitrate:F1} Mbps";
-                        _lastUpdateTime = now;
-                        _lastBytes = _totalBytes;
-                    }
-                }
-                catch
-                {
-                }
-            }, System.Windows.Threading.DispatcherPriority.Background);
-        }
-        catch
-        {
-        }
-    }
-
-    private async System.Threading.Tasks.Task Connect()
-    {
-        if (IsConnected || string.IsNullOrWhiteSpace(ServerIp))
-            return;
-
-        try
-        {
-            StatusText = "正在连接...";
-            DiagnosticInfo = $"正在连接到 {ServerIp}:{NetworkConfig.SignalingPort}...";
-            await _client.ConnectAsync(ServerIp, NetworkConfig.SignalingPort);
-        }
-        catch (Exception ex)
-        {
-            StatusText = $"连接失败: {ex.Message}";
-            DiagnosticInfo = $"连接失败: {ex.Message}";
-        }
-    }
-
-    private async System.Threading.Tasks.Task Disconnect()
-    {
-        if (!IsConnected)
-            return;
-
-        try
-        {
-            await _client.DisconnectAsync();
-            VideoFrame = null;
-        }
-        catch
-        {
-        }
-    }
-
-    public void Dispose()
-    {
-        _client.Dispose();
-    }
-}
+          
