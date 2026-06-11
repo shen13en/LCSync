@@ -7,17 +7,24 @@
     <UseWPF>true</UseWPF>
     <AssemblyName>LCSync</AssemblyName>
     <RootNamespace>LCSync</RootNamespace>
-    <Version>1.0.0</Version>
+    <Version>1.2.0</Version>
     <Authors>LCSync</Authors>
     <Description>实验室中心联屏系统</Description>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <ReleaseVersion>1.1.0</ReleaseVersion>
+    <ReleaseVersion>1.2.0</ReleaseVersion>
+    <Nullable>disable</Nullable>
     <ApplicationIcon>..\..\assets\app.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="System.Drawing.Common" Version="4.7.2" />
     <PackageReference Include="WebSocketSharp" Version="1.0.3-rc11" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Web" />
   </ItemGroup>
 
 </Project>

@@ -73,10 +73,6 @@ public class ScreenCaptureService : IDisposable
 
     public void Stop()
     {
-    }
-
-    public void Dispose()
-    {
         if (_disposed)
             return;
 
@@ -85,5 +81,14 @@ public class ScreenCaptureService : IDisposable
         _screenBitmap?.Dispose();
         _resizedGraphics?.Dispose();
         _resizedBitmap?.Dispose();
+        _screenGraphics = null;
+        _screenBitmap = null;
+        _resizedGraphics = null;
+        _resizedBitmap = null;
+    }
+
+    public void Dispose()
+    {
+        Stop();
     }
 }

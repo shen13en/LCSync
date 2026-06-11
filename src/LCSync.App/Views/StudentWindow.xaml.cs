@@ -32,6 +32,14 @@ public partial class StudentWindow : Window
         });
     }
 
+    private void OnDownloadFile(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.Button button && button.Tag is string fileId)
+        {
+            _viewModel?.DownloadFile(fileId);
+        }
+    }
+
     private void ToggleFullscreen(object sender, RoutedEventArgs e)
     {
         if (_isFullscreen)

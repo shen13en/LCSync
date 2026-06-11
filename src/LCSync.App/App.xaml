@@ -12,6 +12,8 @@
                     <lcsync:TabIndexConverter x:Key="TabIndexConverter"/>
                     <lcsync:TabVisibilityConverter x:Key="TabVisibilityConverter"/>
                     <lcsync:FileSizeConverter x:Key="FileSizeConverter"/>
+                    <lcsync:BoolToToggleTextConverter x:Key="BoolToToggleTextConverter"/>
+                    <lcsync:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
                 </ResourceDictionary>
             </ResourceDictionary.MergedDictionaries>
             
@@ -38,12 +40,6 @@
                 <Setter Property="Background" Value="Transparent"/>
                 <Setter Property="BorderThickness" Value="0"/>
                 <Setter Property="Cursor" Value="Hand"/>
-                <Style.Triggers>
-                    <Trigger Property="IsChecked" Value="True">
-                        <Setter Property="Foreground" Value="#3B82F6"/>
-                        <Setter Property="FontWeight" Value="600"/>
-                    </Trigger>
-                </Style.Triggers>
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="RadioButton">
@@ -53,6 +49,12 @@
                         </ControlTemplate>
                     </Setter.Value>
                 </Setter>
+                <Style.Triggers>
+                    <Trigger Property="IsChecked" Value="True">
+                        <Setter Property="Foreground" Value="#3B82F6"/>
+                        <Setter Property="FontWeight" Value="600"/>
+                    </Trigger>
+                </Style.Triggers>
             </Style>
 
         </ResourceDictionary>

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading;
@@ -67,7 +68,9 @@ public class SignalingServer : IDisposable
         Buffer.BlockCopy(BitConverter.GetBytes(frameData.Length), 0, _broadcastBuffer, 1, 4);
         Buffer.BlockCopy(frameData, 0, _broadcastBuffer, 5, frameData.Length);
 
-        foreach (var student in _students.Values)
+        // 快照当前学生列表，避免并发断开导致异常
+        var students = _students.Values.ToArray();
+        foreach (var student in students)
         {
             try
             {
@@ -85,19 +88,22 @@ public class SignalingServer : IDisposable
         }
     }
 
-    public async System.Threading.Tasks.Task BroadcastVideoFrameAsync(byte[] frameData, CancellationToken cancellationToken)
+    public System.Threading.Tasks.Task BroadcastVideoFrameAsync(byte[] frameData, CancellationToken cancellationToken)
     {
         BroadcastVideoFrame(frameData);
+        return System.Threading.Tasks.Task.CompletedTask;
     }
 
-    public async System.Threading.Tasks.Task StartAsync(int port)
+    public System.Threading.Tasks.Task StartAsync(int port)
     {
         Start(port);
+        return System.Threading.Tasks.Task.CompletedTask;
     }
 
-    public async System.Threading.Tasks.Task StopAsync()
+    public System.Threading.Tasks.Task StopAsync()
     {
         Stop();
+        return System.Threading.Tasks.Task.CompletedTask;
     }
 
     public void Stop()
@@ -129,7 +135,9 @@ public class SignalingServer : IDisposable
         Buffer.BlockCopy(BitConverter.GetBytes(payload.Length), 0, msg, 1, 4);
         Buffer.BlockCopy(payload, 0, msg, 5, payload.Length);
 
-        foreach (var student in _students.Values)
+        // 快照当前学生列表，避免并发断开导致异常
+        var students = _students.Values.ToArray();
+        foreach (var student in students)
         {
             try
             {
@@ -141,27 +149,10 @@ public class SignalingServer : IDisposable
         }
     }
 
+    // 提交通知改为只通知教师端内部使用，不再广播给学生
     public void SendSubmissionNotify(string studentName)
     {
-        if (!IsRunning)
-            return;
-
-        var payload = System.Text.Encoding.UTF8.GetBytes(studentName);
-        byte[] msg = new byte[5 + payload.Length];
-        msg[0] = (byte)MessageType.SubmissionNotify;
-        Buffer.BlockCopy(BitConverter.GetBytes(payload.Length), 0, msg, 1, 4);
-        Buffer.BlockCopy(payload, 0, msg, 5, payload.Length);
-
-        foreach (var student in _students.Values)
-        {
-            try
-            {
-                var ws = student.Context.WebSocket;
-                if (ws.IsAlive)
-                    ws.Send(msg);
-            }
-            catch { }
-        }
+        // 不需要通过 WebSocket 通知，教师端通过 FileServerService.SubmissionReceived 事件接收
     }
 
     public void Dispose()

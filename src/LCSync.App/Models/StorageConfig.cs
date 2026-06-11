@@ -28,4 +28,7 @@ public class StorageConfig
     public static string GetDefaultConfigPath()
     {
         return Path.Combine(
-            Environment.GetFolderPath(Environ
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "LCSync", "settings.json");
+    }
+}

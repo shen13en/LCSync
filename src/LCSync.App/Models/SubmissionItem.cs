@@ -10,4 +10,7 @@ public class SubmissionItem
     [DataMember] public string StudentName { get; set; } = string.Empty;
     [DataMember] public string StudentId { get; set; } = string.Empty;
     [DataMember] public string FileName { get; set; } = string.Empty;
-    [DataMember] public long Size { get
+    [DataMember] public long Size { get; set; }
+    [DataMember] public DateTime SubmitTime { get; set; }
+    [DataMember] public string StoragePath { get; set; } = string.Empty;
+}

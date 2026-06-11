@@ -74,16 +74,17 @@ public class LightweightVideoEncoder : IDisposable
 
     public void Stop()
     {
-    }
-
-    public void Dispose()
-    {
         if (_disposed)
             return;
 
         _disposed = true;
-
         if (_resizeHandle.IsAllocated)
             _resizeHandle.Free();
+        _resizeBuffer = null;
+    }
+
+    public void Dispose()
+    {
+        Stop();
     }
 }

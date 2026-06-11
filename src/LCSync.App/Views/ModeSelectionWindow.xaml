@@ -157,7 +157,7 @@
         </Grid>
         
         <TextBlock Grid.Row="1" 
-                   Text="版本 1.0.0 · LCSync 实验室联屏系统" 
+                   Text="版本 1.2.0 · LCSync 实验室联屏系统"
                    FontSize="12" 
                    Foreground="#94A3B8" 
                    HorizontalAlignment="Center"

@@ -76,31 +76,30 @@ public class SignalingClient : IDisposable
 
     private void ProcessBuffer()
     {
-        if (_messageBuffer.Count < 5)
-            return;
-
-        var buffer = _messageBuffer.ToArray();
-        _messageBuffer.Clear();
-
-        try
+        while (_messageBuffer.Count >= 5)
         {
-            var messageType = (MessageType)buffer[0];
+            var buffer = _messageBuffer.ToArray();
             var dataLength = BitConverter.ToInt32(buffer, 1);
 
+            // 如果数据还不够一个完整消息，保留缓冲区等待更多数据
             if (buffer.Length < 5 + dataLength)
-            {
-                _messageBuffer.AddRange(buffer);
                 return;
+
+            // 移除已处理的消息数据
+            _messageBuffer.RemoveRange(0, 5 + dataLength);
+
+            try
+            {
+                var messageType = (MessageType)buffer[0];
+                var payload = new byte[dataLength];
+                Buffer.BlockCopy(buffer, 5, payload, 0, dataLength);
+
+                HandleMessage(messageType, payload);
             }
-
-            var payload = new byte[dataLength];
-            Buffer.BlockCopy(buffer, 5, payload, 0, dataLength);
-
-            HandleMessage(messageType, payload);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"处理消息错误: {ex.Message}");
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"处理消息错误: {ex.Message}");
+            }
         }
     }
 
@@ -167,10 +166,10 @@ public class SignalingClient : IDisposable
         return result;
     }
 
-    public async System.Threading.Tasks.Task DisconnectAsync()
+    public System.Threading.Tasks.Task DisconnectAsync()
     {
         if (_webSocket == null)
-            return;
+            return System.Threading.Tasks.Task.CompletedTask;
 
         try
         {
@@ -186,6 +185,7 @@ public class SignalingClient : IDisposable
         _webSocket = null;
 
         Disconnected?.Invoke(this, EventArgs.Empty);
+        return System.Threading.Tasks.Task.CompletedTask;
     }
 
     public void Dispose()
